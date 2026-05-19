@@ -142,16 +142,16 @@ EndFunc
 
 Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     Local $hdc
-    Local $ps
+    Local $tPaint
     Local $hOldFont
     Local $szText
-    Local $rect
+    Local $tRect
 
     Local $hWnd = $tCtrl.hwnd
 
     ; If $wParam = 0 Then
         ; Get a device context for this window
-        $hdc = _WinAPI_BeginPaint($hWnd, $ps)
+        $hdc = _WinAPI_BeginPaint($hWnd, $tPaint)
     ; Else
     ;     $hdc = $wParam
     ; EndIf
@@ -166,8 +166,8 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_GraphicsSetTextRenderingHint($hGraphics, $GDIP_TEXTRENDERINGHINTCLEARTYPEGRIDFIT)
     Local $iRadius = 4
     Local $iDiameter = $iRadius * 2
-    $rect = _WinAPI_GetClientRect($hWnd)
-    Local $iWidth = $rect.Right - 1, $iHeight = $rect.Bottom - 1
+    $tRect = _WinAPI_GetClientRect($hWnd)
+    Local $iWidth = $tRect.Right - 1, $iHeight = $tRect.Bottom - 1
     Local $hPath = _GDIPlus_PathCreate()
     _GDIPlus_PathAddArc($hPath, 0, 0, $iDiameter, $iDiameter, 180, 90)
     _GDIPlus_PathAddArc($hPath, $iWidth - $iDiameter, 0, $iDiameter, $iDiameter, 270, 90)
@@ -188,7 +188,7 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_StringFormatSetLineAlign($hFormat, 1)
 
     _GDIPlus_BrushSetSolidColor($hBrush, $tCtrl.isHovered ? 0xFFFAFAFA : 0xFFE2E2E2)
-    Local $tRect = _GDIPlus_RectFCreate(0, 0, $rect.right, $rect.bottom)
+    Local $tRect = _GDIPlus_RectFCreate(0, 0, $tRect.right, $tRect.bottom)
     _GDIPlus_GraphicsDrawStringEx($hGraphics, _WinAPI_GetWindowText($hWnd), $gdiplusFont, $trect, $hFormat, $hBrush)
 
     _GDIPlus_FontDispose($gdiplusFont)
@@ -211,25 +211,25 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     $szText = _WinAPI_GetWindowText($hWnd)
 
     ; Work out where to draw
-    $rect = _WinAPI_GetClientRect($hWnd)
+    $tRect = _WinAPI_GetClientRect($hWnd)
 
     ; Find out how big the text will be
     Local $sz = _WinAPI_GetTextExtentPoint32($hdc, $szText)
 
     ; Center the text
-    Local $x = ($rect.right - $sz.x) / 2
-    Local $y = ($rect.bottom - $sz.y) / 2
+    Local $x = ($tRect.right - $sz.x) / 2
+    Local $y = ($tRect.bottom - $sz.y) / 2
 
     ; Draw the text
-    ; __GUICtrlButton_ExtTextOut($hdc, $x, $y, $ETO_OPAQUE, $rect, $szText, 0)
-    ; __GUICtrlButton_ExtTextOut($hdc, $x, $y, 0, $rect, $szText, 0)
+    ; __GUICtrlButton_ExtTextOut($hdc, $x, $y, $ETO_OPAQUE, $tRect, $szText, 0)
+    ; __GUICtrlButton_ExtTextOut($hdc, $x, $y, 0, $tRect, $szText, 0)
 
     ; Restore the old font when we have finished
     _WinAPI_SelectObject($hdc, $hOldFont)
 
     ; Release the device context
     ; If $wParam = 0 Then
-        _WinAPI_EndPaint($hWnd, $ps)
+        _WinAPI_EndPaint($hWnd, $tPaint)
     ; EndIf
 
     Return 0
@@ -237,12 +237,12 @@ EndFunc
 
 Func __GUICtrlButton_OnLButtonDown($tCtrl, $wParam, $lParam)
     Local $hWnd = $tCtrl.hwnd
-    Local $rect = _WinAPI_GetWindowRect($hWnd)
-    _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $rect)
+    Local $tRect = _WinAPI_GetWindowRect($hWnd)
+    _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $tRect)
     If $tCtrl.isDragging = 0 Then
         $tCtrl.isDragging = 1
         _WinAPI_SetCapture($hWnd)
-        _WinAPI_SetWindowPos($hWnd, 0, $rect.left+1, $rect.top+1, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
+        _WinAPI_SetWindowPos($hWnd, 0, $tRect.left+1, $tRect.top+1, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
     EndIf
     Return 0
 EndFunc
@@ -254,9 +254,9 @@ Func __GUICtrlButton_OnLButtonUp($tCtrl, $wParam, $lParam)
         Local $hWnd = $tCtrl.hwnd
 
         _WinAPI_ReleaseCapture()
-        Local $rect = _WinAPI_GetWindowRect($hWnd)
-        _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $rect)
-        _WinAPI_SetWindowPos($hWnd, 0, $rect.left-1, $rect.top-1, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
+        Local $tRect = _WinAPI_GetWindowRect($hWnd)
+        _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $tRect)
+        _WinAPI_SetWindowPos($hWnd, 0, $tRect.left-1, $tRect.top-1, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
     EndIf
 
     Return 0
@@ -274,9 +274,9 @@ Func __GUICtrlButton_OnCaptureChanged($tCtrl, $wParam, $lParam)
     If $tCtrl.isDragging = 1 Then
         Local $hWnd = $tCtrl.hwnd
         $tCtrl.isDragging = 0
-        Local $rect = _WinAPI_GetWindowRect($hWnd)
-        _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $rect)
-        _WinAPI_SetWindowPos($hWnd, 0, $rect.left-1, $rect.top-1, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
+        Local $tRect = _WinAPI_GetWindowRect($hWnd)
+        _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $tRect)
+        _WinAPI_SetWindowPos($hWnd, 0, $tRect.left-1, $tRect.top-1, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
     EndIf
     Return 0
 EndFunc
