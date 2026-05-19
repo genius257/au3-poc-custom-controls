@@ -290,7 +290,7 @@ Func __GUICtrlButton_OnMouseMove($tCtrl, $wParam, $lParam)
     return 0
 EndFunc
 
-Func _GUICtrlButton_Create($hWnd, $text, $left, $top, $width, $height)
+Func _GUICtrlButton_Create($hWnd, $text, $iLeft, $iTop, $iWidth, $iHeight)
     If $__g_GUICtrlButton_hProc = 0 Then __GUICtrlButton_StartUp()
 
     Local $_previous = GUISwitch($hWnd)
@@ -299,16 +299,11 @@ Func _GUICtrlButton_Create($hWnd, $text, $left, $top, $width, $height)
 
     Local $iExStyle = 0; $WS_EX_CLIENTEDGE
     Local $iStyle = BitOR($WS_VISIBLE, $WS_CHILD)
-    Local $iX = $left
-    Local $iY = $top
-    Local $iWidth = $width
-    Local $iHeight = $height
-    Local $hParent = $hWnd
     Local $hMenu = $iCtrlID
     Local $hInstance = $__g_GUICtrlButton_hInstance
     Local $pParam = 0
 
-    Local $_hWnd = _WinAPI_CreateWindowEx($iExStyle, $__g_GUICtrlButton_sClass, $text, $iStyle, $iX, $iY, $iWidth, $iHeight, $hParent, $hMenu, $hInstance, $pParam)
+    Local $_hWnd = _WinAPI_CreateWindowEx($iExStyle, $__g_GUICtrlButton_sClass, $text, $iStyle, $iLeft, $iTop, $iWidth, $iHeight, $hWnd, $hMenu, $hInstance, $pParam)
 
     Return $_hWnd
 EndFunc
