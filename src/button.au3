@@ -164,14 +164,15 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_GraphicsSetSmoothingMode($hGraphics, $GDIP_SMOOTHINGMODE_ANTIALIAS)
     ;_GDIPlus_GraphicsSetPixelOffsetMode($hGraphics, $GDIP_PIXELOFFSETMODE_HALF)
     _GDIPlus_GraphicsSetTextRenderingHint($hGraphics, $GDIP_TEXTRENDERINGHINTCLEARTYPEGRIDFIT)
-    Local $r = 8
+    Local $iRadius = 4
+    Local $iDiameter = $iRadius * 2
     $rect = _WinAPI_GetClientRect($hWnd)
-    Local $w = $rect.Right - 1, $h = $rect.Bottom - 1
+    Local $iWidth = $rect.Right - 1, $iHeight = $rect.Bottom - 1
     Local $hPath = _GDIPlus_PathCreate()
-    _GDIPlus_PathAddArc($hPath, 0, 0, $r, $r, 180, 90)
-    _GDIPlus_PathAddArc($hPath, $w - $r, 0, $r, $r, 270, 90)
-    _GDIPlus_PathAddArc($hPath, $w - $r, $h - $r, $r, $r, 0, 90)
-    _GDIPlus_PathAddArc($hPath, 0, $h - $r, $r, $r, 90, 90)
+    _GDIPlus_PathAddArc($hPath, 0, 0, $iDiameter, $iDiameter, 180, 90)
+    _GDIPlus_PathAddArc($hPath, $iWidth - $iDiameter, 0, $iDiameter, $iDiameter, 270, 90)
+    _GDIPlus_PathAddArc($hPath, $iWidth - $iDiameter, $iHeight - $iDiameter, $iDiameter, $iDiameter, 0, 90)
+    _GDIPlus_PathAddArc($hPath, 0, $iHeight - $iDiameter, $iDiameter, $iDiameter, 90, 90)
     _GDIPlus_PathCloseFigure($hPath)
     Local $hBrush = _GDIPlus_BrushCreateSolid($tCtrl.isHovered ? 0x13FFFFFF : 0x0AFFFFFF); 0x13... When hover
     Local $hPen = _GDIPlus_PenCreate(0x28FFFFFF)
