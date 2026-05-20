@@ -7,6 +7,7 @@
 #include <WinAPIRes.au3>
 #include <GDIPlus.au3>
 #include <WinAPISys.au3>
+#include <Timers.au3>
 
 If Not IsDeclared("MA_ACTIVATE") Then Global Const $MA_ACTIVATE  = 1
 If Not IsDeclared("ETO_OPAQUE") Then Global Const $ETO_OPAQUE = 2
@@ -14,7 +15,8 @@ If Not IsDeclared("PRF_CLIENT") Then Global Const $PRF_CLIENT = 0x00000004
 
 Global Const $__g_GUICtrlButton_WM_ = $WM_USER + 1
 Global Const $__g_GUICtrlButton_tagCREATESTRUCTW = "PTR lpCreateParams;HANDLE hInstance;HANDLE hMenu;HWND hwndParent;INT cy;INT cx;INT y;INT x;LONG style;PTR lpszName;PTR lpszClass;DWORD dwExStyle;"
-Global Const $__g_GUICtrlButton_tagCtrl = "DWORD crForeGnd;DWORD crBackGnd;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;"
+Global Const $__g_GUICtrlButton_tagCtrl = "DWORD crForeGnd;DWORD crBackGnd;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;ptr pTransitions;int iTransitionCount;"
+Global Const $__g_GUICtrlButton_tagTransition = "int type;dword dwStartValue; dword dwEndValue;uint64 startTime;int duration;int delay;int targetIndex;"
 Global Const $__g_GUICtrlButton_sClass = _WinAPI_CreateGUID()
 Global $__g_GUICtrlButton_hInstance = 0
 Global $__g_GUICtrlButton_hCursor = 0
@@ -106,6 +108,7 @@ Func __GUICtrlButton_WndProc($hWnd, $iMsg, $wParam, $lParam)
         ; Clean up when the window is destroyed.
         Case $WM_NCDESTROY
             Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
+            If $tCtrl.pTransitions <> 0 Then _WinAPI_FreeMemory($tCtrl.pTransitions)
             _WinAPI_FreeMemory(DllStructGetPtr($tCtrl))
         Case $WM_PAINT
             Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
@@ -126,6 +129,7 @@ Func __GUICtrlButton_WndProc($hWnd, $iMsg, $wParam, $lParam)
             Return __GUICtrlButton_OnSetFont($tCtrl, $wParam, $lParam)
         Case $WM_MOUSELEAVE
             Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
+            if $tCtrl.isHovered = 1 Then __GUICtrlButton_AddTransition($tCtrl, 0, 2, 0x0AFFFFFF, 150)
             $tCtrl.isHovered = 0
             _WinAPI_InvalidateRect($hWnd, 0, True)
             return 0
@@ -176,7 +180,7 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_PathAddArc($hPath, $iWidth - $iDiameter, $iHeight - $iDiameter, $iDiameter, $iDiameter, 0, 90)
     _GDIPlus_PathAddArc($hPath, 0, $iHeight - $iDiameter, $iDiameter, $iDiameter, 90, 90)
     _GDIPlus_PathCloseFigure($hPath)
-    Local $hBrush = _GDIPlus_BrushCreateSolid($tCtrl.isHovered ? 0x13FFFFFF : 0x0AFFFFFF); 0x13... When hover
+    Local $hBrush = _GDIPlus_BrushCreateSolid($tCtrl.crBackGnd)
     Local $hPen = _GDIPlus_PenCreate(0x28FFFFFF)
     _GDIPlus_GraphicsFillPath($hGraphics2, $hPath, $hBrush)
     _GDIPlus_GraphicsDrawPath($hGraphics2, $hPath, $hPen)
@@ -291,6 +295,7 @@ Func __GUICtrlButton_OnMouseMove($tCtrl, $wParam, $lParam)
     If $tCtrl.isHovered = 0 Then
         Local $hWnd = $tCtrl.hwnd
         $tCtrl.isHovered = 1
+        __GUICtrlButton_AddTransition($tCtrl, 0, 2, 0x13FFFFFF, 150)
         _WinAPI_TrackMouseEvent($hWnd, $TME_LEAVE)
         _WinAPI_InvalidateRect($hWnd, 0, True)
     EndIf
@@ -321,4 +326,106 @@ Func __GUICtrlButton_ExtTextOut($hdc, $x, $y, $options, $lprect, $lpstring, $lpD
     If @error Then Return SetError(@error, @extended, 0)
 
     Return $aRet[0]
+EndFunc
+
+Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration, $iDelay = 0)
+    Local $iSize = DllStructGetSize(DllStructCreate($__g_GUICtrlButton_tagTransition, 1))
+
+    ; --- FIX: Check for existing transition on the same targetIndex ---
+    For $i = 0 To $tCtrl.iTransitionCount - 1
+        Local $pCheck = $tCtrl.pTransitions + ($i * $iSize)
+        Local $tCheck = DllStructCreate($__g_GUICtrlButton_tagTransition, $pCheck)
+        If $tCheck.targetIndex = $iIndex Then
+            ; Update the existing transition instead of adding a new one
+            $tCheck.type = $iType
+            $tCheck.dwStartValue = DllStructGetData($tCtrl, $iIndex)
+            $tCheck.dwEndValue = $iEndVal
+            $tCheck.startTime = _WinAPI_GetTickCount64()
+            $tCheck.duration = $iDuration
+            $tCheck.delay = $iDelay
+            Return ; Exit function, don't add a new one
+        EndIf
+    Next
+    ; -----------------------------------------------------------------
+
+    $tCtrl.iTransitionCount += 1
+    $tCtrl.pTransitions = _WinAPI_CreateBuffer($tCtrl.iTransitionCount * $iSize, $tCtrl.pTransitions)
+
+    Local $tTransition = DllStructCreate($__g_GUICtrlButton_tagTransition, $tCtrl.pTransitions + (($tCtrl.iTransitionCount - 1) * $iSize))
+    $tTransition.type = $iType
+    $tTransition.targetIndex = $iIndex
+    $tTransition.dwStartValue = DllStructGetData($tCtrl, $iIndex)
+    $tTransition.dwEndValue = $iEndVal
+    $tTransition.startTime = _WinAPI_GetTickCount64()
+    $tTransition.duration = $iDuration
+    $tTransition.delay = $iDelay
+
+    If $tCtrl.iTransitionCount = 1 Then _Timer_SetTimer($tCtrl.hwnd, 16, "__GUICtrlButton_ProcessTransitions") ;_WinAPI_SetTimer($tCtrl.hwnd, )
+EndFunc
+
+Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
+    Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
+    If $tCtrl.iTransitionCount = 0 Then
+        _Timer_KillTimer($hWnd, $iIDTimer)
+        Return
+    EndIf
+
+    Local $iSize = DllStructGetSize(DllStructCreate($__g_GUICtrlButton_tagTransition, 1))
+    Local $iNow = _WinAPI_GetTickCount64()
+
+    Local $bReRender = False
+    Local $i = 0
+    While $i < $tCtrl.iTransitionCount
+        Local $pCurrent = $tCtrl.pTransitions + (($i) * $iSize)
+        Local $tTrans = DllStructCreate($__g_GUICtrlButton_tagTransition, $pCurrent)
+        Local $fRatio = ($iNow - $tTrans.StartTime) / $tTrans.Duration
+        If $fRatio > 1.0 Then $fRatio = 1.0
+        
+        Local $iNewVal = __GUICtrlButton_GetLerp($tTrans.dwStartValue, $tTrans.dwEndValue, $fRatio)
+        If $iNewVal <> DllStructGetData($tCtrl, $tTrans.targetIndex) Then
+            $bReRender = True
+            DllStructSetData($tCtrl, $tTrans.targetIndex, $iNewVal)
+        EndIf
+        
+        If $fRatio >= 1.0 Then
+            ; Remove transition by shifting memory or decrementing count for simplicity here:
+            $tCtrl.iTransitionCount -= 1
+
+            Local $iRemaining = $tCtrl.iTransitionCount - $i
+            If $iRemaining > 0 Then
+                ; Shift memory left
+                _WinAPI_MoveMemory($pCurrent, $pCurrent + $iSize, $iRemaining * $iSize)
+                ; Do not increment $i, as the next item is now at the current position
+            Else
+                ; No more items, or it was the last item
+                If $tCtrl.iTransitionCount == 0 Then
+                    _WinAPI_FreeMemory($tCtrl.pTransitions)
+                    $tCtrl.pTransitions = 0
+                EndIf
+                $i += 1
+            EndIf
+        Else
+            $i += 1
+        EndIf
+    WEnd
+
+    If $bReRender Then _WinAPI_InvalidateRect($hWnd, 0, True)
+EndFunc
+
+Func __GUICtrlButton_GetLerp($iStart, $iEnd, $fRatio)
+    Local $aIn = _UnpackARGB($iStart), $aOut = _UnpackARGB($iEnd), $aRes[4]
+    For $i = 0 To 3
+        $aRes[$i] = $aIn[$i] + ($aOut[$i] - $aIn[$i]) * $fRatio
+    Next
+    Return _PackARGB($aRes[0], $aRes[1], $aRes[2], $aRes[3])
+EndFunc
+
+Func _UnpackARGB($iColor)
+    Local $a[4] = [BitAND(BitShift($iColor, 24), 0xFF), BitAND(BitShift($iColor, 16), 0xFF), _
+                   BitAND(BitShift($iColor, 8), 0xFF), BitAND($iColor, 0xFF)]
+    Return $a
+EndFunc
+
+Func _PackARGB($a, $r, $g, $b)
+    Return BitOR(BitShift($a, -24), BitShift($r, -16), BitShift($g, -8), $b)
 EndFunc
