@@ -160,13 +160,18 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _SendMessage(_WinAPI_GetParent($hWnd), $WM_PRINTCLIENT, $hdc, $PRF_CLIENT)
 
     $hOldFont = _WinAPI_SelectObject($hdc, $tCtrl.hFont)
+    $tRect = _WinAPI_GetClientRect($hWnd)
     Local $hGraphics = _GDIPlus_GraphicsCreateFromHDC($hdc)
+    Local $hBitmap = _GDIPlus_BitmapCreateFromGraphics($tRect.Right - $tRect.Left, $tRect.Bottom - $tRect.Top, $hGraphics)
+    Local $hGraphics2 = _GDIPlus_ImageGetGraphicsContext($hBitmap)
+    _GDIPlus_GraphicsClear($hGraphics2, 0x00000000)
     _GDIPlus_GraphicsSetSmoothingMode($hGraphics, $GDIP_SMOOTHINGMODE_ANTIALIAS)
+    _GDIPlus_GraphicsSetSmoothingMode($hGraphics2, $GDIP_SMOOTHINGMODE_ANTIALIAS)
     ;_GDIPlus_GraphicsSetPixelOffsetMode($hGraphics, $GDIP_PIXELOFFSETMODE_HALF)
     _GDIPlus_GraphicsSetTextRenderingHint($hGraphics, $GDIP_TEXTRENDERINGHINTCLEARTYPEGRIDFIT)
+    _GDIPlus_GraphicsSetTextRenderingHint($hGraphics2, $GDIP_TEXTRENDERINGHINTCLEARTYPEGRIDFIT)
     Local $iRadius = 4
     Local $iDiameter = $iRadius * 2
-    $tRect = _WinAPI_GetClientRect($hWnd)
     Local $iWidth = $tRect.Right - 1, $iHeight = $tRect.Bottom - 1
     Local $hPath = _GDIPlus_PathCreate()
     _GDIPlus_PathAddArc($hPath, 0, 0, $iDiameter, $iDiameter, 180, 90)
@@ -176,8 +181,8 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_PathCloseFigure($hPath)
     Local $hBrush = _GDIPlus_BrushCreateSolid($tCtrl.isHovered ? 0x13FFFFFF : 0x0AFFFFFF); 0x13... When hover
     Local $hPen = _GDIPlus_PenCreate(0x28FFFFFF)
-    _GDIPlus_GraphicsFillPath($hGraphics, $hPath, $hBrush)
-    _GDIPlus_GraphicsDrawPath($hGraphics, $hPath, $hPen)
+    _GDIPlus_GraphicsFillPath($hGraphics2, $hPath, $hBrush)
+    _GDIPlus_GraphicsDrawPath($hGraphics2, $hPath, $hPen)
 
     ;Local $hFont = _SendMessage($hWnd, $WM_GETFONT, 0, 0)
     ;If $hFont = 0 Then $hFont = _WinAPI_GetStockObject($DEFAULT_GUI_FONT)
@@ -189,7 +194,9 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
 
     _GDIPlus_BrushSetSolidColor($hBrush, $tCtrl.isHovered ? 0xFFFAFAFA : 0xFFE2E2E2)
     Local $tRectF = _GDIPlus_RectFCreate(0, 0, $tRect.right, $tRect.bottom)
-    _GDIPlus_GraphicsDrawStringEx($hGraphics, _WinAPI_GetWindowText($hWnd), $gdiplusFont, $tRectF, $hFormat, $hBrush)
+    _GDIPlus_GraphicsDrawStringEx($hGraphics2, _WinAPI_GetWindowText($hWnd), $gdiplusFont, $tRectF, $hFormat, $hBrush)
+
+    _GDIPlus_GraphicsDrawImageRect($hGraphics, $hBitmap, 0, 0, $tRect.Right - $tRect.Left, $tRect.Bottom - $tRect.Top)
 
     _GDIPlus_FontDispose($gdiplusFont)
     _GDIPlus_StringFormatDispose($hFormat)
@@ -197,6 +204,8 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_PenDispose($hPen)
     _GDIPlus_BrushDispose($hBrush)
     _GDIPlus_PathDispose($hPath)
+    _GDIPlus_GraphicsDispose($hGraphics2)
+    _GDIPlus_ImageDispose($hBitmap)
     _GDIPlus_GraphicsDispose($hGraphics)
 
     ; Set the font we are going to use
