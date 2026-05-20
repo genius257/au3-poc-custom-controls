@@ -188,8 +188,8 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_StringFormatSetLineAlign($hFormat, 1)
 
     _GDIPlus_BrushSetSolidColor($hBrush, $tCtrl.isHovered ? 0xFFFAFAFA : 0xFFE2E2E2)
-    Local $tRect = _GDIPlus_RectFCreate(0, 0, $tRect.right, $tRect.bottom)
-    _GDIPlus_GraphicsDrawStringEx($hGraphics, _WinAPI_GetWindowText($hWnd), $gdiplusFont, $trect, $hFormat, $hBrush)
+    Local $tRectF = _GDIPlus_RectFCreate(0, 0, $tRect.right, $tRect.bottom)
+    _GDIPlus_GraphicsDrawStringEx($hGraphics, _WinAPI_GetWindowText($hWnd), $gdiplusFont, $tRectF, $hFormat, $hBrush)
 
     _GDIPlus_FontDispose($gdiplusFont)
     _GDIPlus_StringFormatDispose($hFormat)
