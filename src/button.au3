@@ -15,7 +15,7 @@ If Not IsDeclared("PRF_CLIENT") Then Global Const $PRF_CLIENT = 0x00000004
 
 Global Const $__g_GUICtrlButton_WM_ = $WM_USER + 1
 Global Const $__g_GUICtrlButton_tagCREATESTRUCTW = "PTR lpCreateParams;HANDLE hInstance;HANDLE hMenu;HWND hwndParent;INT cy;INT cx;INT y;INT x;LONG style;PTR lpszName;PTR lpszClass;DWORD dwExStyle;"
-Global Const $__g_GUICtrlButton_tagCtrl = "DWORD crForeGnd;DWORD crBackGnd;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;ptr pTransitions;int iTransitionCount;"
+Global Const $__g_GUICtrlButton_tagCtrl = "DWORD dwTextColor;DWORD dwBackgroundColor;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;ptr pTransitions;int iTransitionCount;"
 Global Const $__g_GUICtrlButton_tagTransition = "int type;dword dwStartValue; dword dwEndValue;uint64 startTime;int duration;int delay;int targetIndex;"
 Global Const $__g_GUICtrlButton_sClass = _WinAPI_CreateGUID()
 Global $__g_GUICtrlButton_hInstance = 0
@@ -92,8 +92,8 @@ Func __GUICtrlButton_WndProc($hWnd, $iMsg, $wParam, $lParam)
 
             ; Initialize the CustCtrl structure.
             $tCtrl.hWnd = $hWnd
-            $tCtrl.crForeGnd = _WinAPI_GetSysColor($COLOR_WINDOWTEXT)
-            $tCtrl.crBackGnd = _WinAPI_GetSysColor($COLOR_WINDOW)
+            $tCtrl.dwTextColor = _WinAPI_GetSysColor($COLOR_WINDOWTEXT)
+            $tCtrl.dwBackgroundColor = _WinAPI_GetSysColor($COLOR_WINDOW)
             $tCtrl.hFont = _WinAPI_GetStockObject($DEFAULT_GUI_FONT)
 
             ; Assign the window text specified in the call to CreateWindow.
@@ -182,7 +182,7 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_PathAddArc($hPath, $iWidth - $iDiameter, $iHeight - $iDiameter, $iDiameter, $iDiameter, 0, 90)
     _GDIPlus_PathAddArc($hPath, 0, $iHeight - $iDiameter, $iDiameter, $iDiameter, 90, 90)
     _GDIPlus_PathCloseFigure($hPath)
-    Local $hBrush = _GDIPlus_BrushCreateSolid($tCtrl.crBackGnd)
+    Local $hBrush = _GDIPlus_BrushCreateSolid($tCtrl.dwBackgroundColor)
     Local $hPen = _GDIPlus_PenCreate(0x28FFFFFF)
     _GDIPlus_GraphicsFillPath($hGraphics2, $hPath, $hBrush)
     _GDIPlus_GraphicsDrawPath($hGraphics2, $hPath, $hPen)
@@ -212,7 +212,7 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_GraphicsDispose($hGraphics)
 
     ; Set the text colours
-    _WinAPI_SetTextColor($hdc, $tCtrl.crForeGnd)
+    _WinAPI_SetTextColor($hdc, $tCtrl.dwTextColor)
     _WinAPI_SetBkColor($hdc, -1)
 
     ; Find the text to draw
@@ -323,7 +323,7 @@ EndFunc
 
 Func _GUICtrlButton_Set_BackgroundColor($hWnd, $iARGB)
     $tCtrl = __GUICtrlButton_GetInstance($hWnd)
-    $tCtrl.crBackGnd = $iARGB
+    $tCtrl.dwBackgroundColor = $iARGB
     _WinAPI_InvalidateRect($hWnd, 0, True)
 EndFunc
 
