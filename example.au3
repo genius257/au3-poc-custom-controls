@@ -4,7 +4,7 @@
 Opt("GUIOnEventMode", 1)
 Opt("TrayIconHide", 1)
 
-Global $hWnd = GUICreate("Controls Example", 700, 320, -1, -1, BitOR($WS_MINIMIZEBOX, $WS_CAPTION, $WS_POPUP, $WS_SYSMENU))
+Global $hWnd = GUICreate("Controls Example", 700, 320, -1, -1, BitOR($WS_MINIMIZEBOX, $WS_CAPTION, $WS_POPUP, $WS_SYSMENU), $WS_EX_COMPOSITED)
 
 GUISetBkColor(0x101010, $hWnd)
 

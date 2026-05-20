@@ -156,9 +156,6 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     ;     $hdc = $wParam
     ; EndIf
 
-    _SendMessage(_WinAPI_GetParent($hWnd), $WM_ERASEBKGND, $hdc, 0)
-    _SendMessage(_WinAPI_GetParent($hWnd), $WM_PRINTCLIENT, $hdc, $PRF_CLIENT)
-
     $hOldFont = _WinAPI_SelectObject($hdc, $tCtrl.hFont)
     $tRect = _WinAPI_GetClientRect($hWnd)
     Local $hGraphics = _GDIPlus_GraphicsCreateFromHDC($hdc)
@@ -307,7 +304,7 @@ Func _GUICtrlButton_Create($hWnd, $text, $iLeft, $iTop, $iWidth, $iHeight)
     Local $iCtrlID = GUICtrlCreateDummy()
     GUISwitch($_previous)
 
-    Local $iExStyle = 0; $WS_EX_CLIENTEDGE
+    Local $iExStyle = $WS_EX_TRANSPARENT; $WS_EX_CLIENTEDGE
     Local $iStyle = BitOR($WS_VISIBLE, $WS_CHILD)
     Local $hMenu = $iCtrlID
     Local $hInstance = $__g_GUICtrlButton_hInstance
