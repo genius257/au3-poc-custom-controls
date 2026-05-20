@@ -9,8 +9,11 @@ Global $hWnd = GUICreate("Controls Example", 700, 320, -1, -1, BitOR($WS_MINIMIZ
 GUISetBkColor(0x101010, $hWnd)
 
 $hButton = _GUICtrlButton_Create($hWnd, "Foo", 10, 10, 100, 30)
+_GUICtrlButton_Set_BackgroundColor($hButton, 0x0AFFFFFF)
 $hButton = _GUICtrlButton_Create($hWnd, "Bar", 120, 10, 100, 30)
+_GUICtrlButton_Set_BackgroundColor($hButton, 0x0AFFFFFF)
 $hButton = _GUICtrlButton_Create($hWnd, "Baz", 230, 10, 100, 30)
+_GUICtrlButton_Set_BackgroundColor($hButton, 0x0AFFFFFF)
 
 GUISetState(@SW_SHOW, $hWnd)
 
