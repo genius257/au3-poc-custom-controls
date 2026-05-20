@@ -160,7 +160,9 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     ;     $hdc = $wParam
     ; EndIf
 
+    ; Set the font we are going to use
     $hOldFont = _WinAPI_SelectObject($hdc, $tCtrl.hFont)
+
     $tRect = _WinAPI_GetClientRect($hWnd)
     Local $hGraphics = _GDIPlus_GraphicsCreateFromHDC($hdc)
     Local $hBitmap = _GDIPlus_BitmapCreateFromGraphics($tRect.Right - $tRect.Left, $tRect.Bottom - $tRect.Top, $hGraphics)
@@ -209,12 +211,8 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     _GDIPlus_ImageDispose($hBitmap)
     _GDIPlus_GraphicsDispose($hGraphics)
 
-    ; Set the font we are going to use
-    ; $hOldFont = _WinAPI_SelectObject($hdc, $tCtrl.hFont)
-
     ; Set the text colours
     _WinAPI_SetTextColor($hdc, $tCtrl.crForeGnd)
-    ; _WinAPI_SetBkColor($hdc, $tCtrl.crBackGnd)
     _WinAPI_SetBkColor($hdc, -1)
 
     ; Find the text to draw
