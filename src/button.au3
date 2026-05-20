@@ -305,9 +305,12 @@ EndFunc
 Func _GUICtrlButton_Create($hWnd, $text, $iLeft, $iTop, $iWidth, $iHeight)
     If $__g_GUICtrlButton_hProc = 0 Then __GUICtrlButton_StartUp()
 
-    Local $_previous = GUISwitch($hWnd)
-    Local $iCtrlID = GUICtrlCreateDummy()
-    GUISwitch($_previous)
+    Local $iCtrlID = 0
+    If _WinAPI_GetClassName($hWnd) == "AutoIt v3 GUI" Then
+        Local $_previous = GUISwitch($hWnd)
+        $iCtrlID = GUICtrlCreateDummy()
+        GUISwitch($_previous)
+    EndIf
 
     Local $iExStyle = $WS_EX_TRANSPARENT; $WS_EX_CLIENTEDGE
     Local $iStyle = BitOR($WS_VISIBLE, $WS_CHILD)
@@ -317,7 +320,7 @@ Func _GUICtrlButton_Create($hWnd, $text, $iLeft, $iTop, $iWidth, $iHeight)
 
     Local $_hWnd = _WinAPI_CreateWindowEx($iExStyle, $__g_GUICtrlButton_sClass, $text, $iStyle, $iLeft, $iTop, $iWidth, $iHeight, $hWnd, $hMenu, $hInstance, $pParam)
 
-    Return $_hWnd
+    Return SetExtended($iCtrlID, $_hWnd)
 EndFunc
 
 Func __GUICtrlButton_ExtTextOut($hdc, $x, $y, $options, $lprect, $lpstring, $lpDx)
