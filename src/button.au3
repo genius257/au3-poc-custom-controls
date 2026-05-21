@@ -13,6 +13,7 @@ If Not IsDeclared("MA_ACTIVATE") Then Global Const $MA_ACTIVATE  = 1
 If Not IsDeclared("ETO_OPAQUE") Then Global Const $ETO_OPAQUE = 2
 If Not IsDeclared("PRF_CLIENT") Then Global Const $PRF_CLIENT = 0x00000004
 
+Global Enum $__g_GUICtrlButton_Transition_Type_ARGB
 Global Const $__g_GUICtrlButton_WM_ = $WM_USER + 1
 Global Const $__g_GUICtrlButton_tagCREATESTRUCTW = "PTR lpCreateParams;HANDLE hInstance;HANDLE hMenu;HWND hwndParent;INT cy;INT cx;INT y;INT x;LONG style;PTR lpszName;PTR lpszClass;DWORD dwExStyle;"
 Global Const $__g_GUICtrlButton_tagCtrl = "DWORD dwTextColor;DWORD dwBackgroundColor;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;ptr pTransitions;int iTransitionCount;"
@@ -129,7 +130,7 @@ Func __GUICtrlButton_WndProc($hWnd, $iMsg, $wParam, $lParam)
             Return __GUICtrlButton_OnSetFont($tCtrl, $wParam, $lParam)
         Case $WM_MOUSELEAVE
             Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
-            if $tCtrl.isHovered = 1 Then __GUICtrlButton_AddTransition($tCtrl, 0, 2, 0x0AFFFFFF, 150)
+            if $tCtrl.isHovered = 1 Then __GUICtrlButton_AddTransition($tCtrl, $__g_GUICtrlButton_Transition_Type_ARGB, 2, 0x0AFFFFFF, 150)
             $tCtrl.isHovered = 0
             _WinAPI_InvalidateRect($hWnd, 0, True)
             return 0
@@ -293,7 +294,7 @@ Func __GUICtrlButton_OnMouseMove($tCtrl, $wParam, $lParam)
     If $tCtrl.isHovered = 0 Then
         Local $hWnd = $tCtrl.hwnd
         $tCtrl.isHovered = 1
-        __GUICtrlButton_AddTransition($tCtrl, 0, 2, 0x13FFFFFF, 150)
+        __GUICtrlButton_AddTransition($tCtrl, $__g_GUICtrlButton_Transition_Type_ARGB, 2, 0x13FFFFFF, 150)
         _WinAPI_TrackMouseEvent($hWnd, $TME_LEAVE)
         _WinAPI_InvalidateRect($hWnd, 0, True)
     EndIf
@@ -388,7 +389,15 @@ Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
         Local $fRatio = ($iNow - $tTrans.StartTime) / $tTrans.Duration
         If $fRatio > 1.0 Then $fRatio = 1.0
         
-        Local $iNewVal = __GUICtrlButton_GetLerp($tTrans.dwStartValue, $tTrans.dwEndValue, $fRatio)
+        Local $iNewVal
+        Switch $tTrans.type
+            Case $__g_GUICtrlButton_Transition_Type_ARGB
+                $iNewVal = __GUICtrlButton_GetLerp($tTrans.dwStartValue, $tTrans.dwEndValue, $fRatio)
+            Case Else
+                ConsoleWriteError("Unexpected transition type: " & $tTrans.type & @CRLF)
+                $i += 1
+                ContinueLoop
+        EndSwitch
         If $iNewVal <> DllStructGetData($tCtrl, $tTrans.targetIndex) Then
             $bReRender = True
             DllStructSetData($tCtrl, $tTrans.targetIndex, $iNewVal)
