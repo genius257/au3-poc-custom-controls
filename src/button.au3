@@ -14,10 +14,12 @@ If Not IsDeclared("ETO_OPAQUE") Then Global Const $ETO_OPAQUE = 2
 If Not IsDeclared("PRF_CLIENT") Then Global Const $PRF_CLIENT = 0x00000004
 
 Global Enum $__g_GUICtrlButton_Transition_Type_ARGB
+Global Enum $__g_GUICtrlButton_Event_Click
 Global Const $__g_GUICtrlButton_WM_ = $WM_USER + 1
 Global Const $__g_GUICtrlButton_tagCREATESTRUCTW = "PTR lpCreateParams;HANDLE hInstance;HANDLE hMenu;HWND hwndParent;INT cy;INT cx;INT y;INT x;LONG style;PTR lpszName;PTR lpszClass;DWORD dwExStyle;"
-Global Const $__g_GUICtrlButton_tagCtrl = "DWORD dwTextColor;DWORD dwBackgroundColor;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;ptr pTransitions;int iTransitionCount;"
+Global Const $__g_GUICtrlButton_tagCtrl = "DWORD dwTextColor;DWORD dwBackgroundColor;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;ptr pTransitions;int iTransitionCount;ptr pEvents;int iEventCount;"
 Global Const $__g_GUICtrlButton_tagTransition = "int type;dword dwStartValue; dword dwEndValue;uint64 startTime;int duration;int delay;int targetIndex;"
+Global Const $__g_GUICtrlButton_tagEvent = "int iEventID;ptr pFunc;"
 Global Const $__g_GUICtrlButton_sClass = _WinAPI_CreateGUID()
 Global $__g_GUICtrlButton_hInstance = 0
 Global $__g_GUICtrlButton_hCursor = 0
@@ -110,6 +112,7 @@ Func __GUICtrlButton_WndProc($hWnd, $iMsg, $wParam, $lParam)
         Case $WM_NCDESTROY
             Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
             If $tCtrl.pTransitions <> 0 Then _WinAPI_FreeMemory($tCtrl.pTransitions)
+            If $tCtrl.pEvents <> 0 Then _WinAPI_FreeMemory($tCtrl.pEvents) ; Free event memory
             _WinAPI_FreeMemory(DllStructGetPtr($tCtrl))
         Case $WM_PAINT
             Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
@@ -266,6 +269,13 @@ Func __GUICtrlButton_OnLButtonUp($tCtrl, $wParam, $lParam)
         Local $tRect = _WinAPI_GetWindowRect($hWnd)
         _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $tRect)
         _WinAPI_SetWindowPos($hWnd, 0, $tRect.left-1, $tRect.top-1, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
+
+        Local $tRect = _WinAPI_GetClientRect($hWnd)
+        Local $tPoint = _WinAPI_GetCursorPos()
+        _WinAPI_ScreenToClient($hWnd, $tPoint)
+        If _WinAPI_PtInRect($tRect, $tPoint) Then;FIXME: this won't work as expected with rounded cornors
+            __GUICtrlButton_DispatchEvent($tCtrl, $__g_GUICtrlButton_Event_Click)
+        EndIf
     EndIf
 
     Return 0
@@ -444,4 +454,40 @@ EndFunc
 
 Func _PackARGB($a, $r, $g, $b)
     Return BitOR(BitShift($a, -24), BitShift($r, -16), BitShift($g, -8), $b)
+EndFunc
+
+Func _GUICtrlButton_AddEventHandler($hWnd, $iEventID, $pFunc)
+    Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
+    Local $iSize = DllStructGetSize(DllStructCreate($__g_GUICtrlButton_tagEvent, 1))
+    
+    ; Increment count and reallocate buffer
+    $tCtrl.iEventCount += 1
+    $tCtrl.pEvents = _WinAPI_CreateBuffer($tCtrl.iEventCount * $iSize, $tCtrl.pEvents)
+    
+    ; Calculate offset and write new event
+    Local $pNewEvent = $tCtrl.pEvents + (($tCtrl.iEventCount - 1) * $iSize)
+    Local $tEvent = DllStructCreate($__g_GUICtrlButton_tagEvent, $pNewEvent)
+    
+    $tEvent.iEventID = $iEventID
+    ; Handle both function names (strings) and actual pointers
+    $tEvent.pFunc = IsString($pFunc) ? DllCallbackGetPtr(DllCallbackRegister($pFunc, "none", "hwnd")) : $pFunc
+EndFunc
+
+Func __GUICtrlButton_DispatchEvent($tCtrl, $iEventID)
+    If $tCtrl.iEventCount = 0 Then Return
+    
+    Local $iSize = DllStructGetSize(DllStructCreate($__g_GUICtrlButton_tagEvent, 1))
+    For $i = 0 To $tCtrl.iEventCount - 1
+        Local $tEvent = DllStructCreate($__g_GUICtrlButton_tagEvent, $tCtrl.pEvents + ($i * $iSize))
+        If $tEvent.iEventID = $iEventID Then
+            ; Execute via DllCall (standard for pointers) or Call()
+            DllCallAddress("none", $tEvent.pFunc, "hwnd", $tCtrl.hwnd)
+        EndIf
+    Next
+EndFunc
+
+Func _WinAPI_GetCursorPos()
+    Local $tPoint = DllStructCreate($tagPOINT)
+	Local $nResult = DllCall("user32.dll", "int", "GetCursorPos", "struct*", $tPoint)
+	Return SetExtended($nResult[0], $tPoint)
 EndFunc

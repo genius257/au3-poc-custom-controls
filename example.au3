@@ -14,6 +14,11 @@ $hButton = _GUICtrlButton_Create($hWnd, "Bar", 120, 10, 100, 30)
 _GUICtrlButton_Set_BackgroundColor($hButton, 0x0AFFFFFF)
 $hButton = _GUICtrlButton_Create($hWnd, "Baz", 230, 10, 100, 30)
 _GUICtrlButton_Set_BackgroundColor($hButton, 0x0AFFFFFF)
+_GUICtrlButton_AddEventHandler($hButton, $__g_GUICtrlButton_Event_Click, "MyFunction")
+
+Func MyFunction($hWnd)
+    ConsoleWrite("Click"&@CRLF)
+EndFunc
 
 GUISetState(@SW_SHOW, $hWnd)
 
