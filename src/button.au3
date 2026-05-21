@@ -316,9 +316,9 @@ Func _GUICtrlButton_Create($hWnd, $text, $iLeft, $iTop, $iWidth, $iHeight)
 
     Local $iCtrlID = 0
     If _WinAPI_GetClassName($hWnd) == "AutoIt v3 GUI" Then
-        Local $_previous = GUISwitch($hWnd)
+        Local $hPreviousWnd = GUISwitch($hWnd)
         $iCtrlID = GUICtrlCreateDummy()
-        GUISwitch($_previous)
+        GUISwitch($hPreviousWnd)
     EndIf
 
     Local $iExStyle = $WS_EX_TRANSPARENT; $WS_EX_CLIENTEDGE
