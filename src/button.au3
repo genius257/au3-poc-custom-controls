@@ -467,14 +467,15 @@ Func __GUICtrlButton_GetLerp($iStart, $iEnd, $fRatio)
     Return _PackARGB($aRes[0], $aRes[1], $aRes[2], $aRes[3])
 EndFunc
 
-Func _UnpackARGB($iColor)
-    Local $a[4] = [BitAND(BitShift($iColor, 24), 0xFF), BitAND(BitShift($iColor, 16), 0xFF), _
-                   BitAND(BitShift($iColor, 8), 0xFF), BitAND($iColor, 0xFF)]
-    Return $a
+Func _ARGBToArray($iColor, ByRef $a)
+    $a[0] = BitAND(BitShift($iColor, 24), 0xFF)
+    $a[1] = BitAND(BitShift($iColor, 16), 0xFF)
+    $a[2] = BitAND(BitShift($iColor, 8), 0xFF)
+    $a[3] = BitAND($iColor, 0xFF)
 EndFunc
 
-Func _PackARGB($a, $r, $g, $b)
-    Return BitOR(BitShift($a, -24), BitShift($r, -16), BitShift($g, -8), $b)
+Func _ArrayToARGB(ByRef $a)
+    Return BitOR(BitShift($a[0], -24), BitShift($a[1], -16), BitShift($a[2], -8), $a[3])
 EndFunc
 
 Func _GUICtrlButton_AddEventHandler($hWnd, $iEventID, $pFunc)
