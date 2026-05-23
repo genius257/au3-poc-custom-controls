@@ -17,7 +17,7 @@ Global Enum $__g_GUICtrlButton_Transition_Type_ARGB, $__g_GUICtrlButton_Transiti
 Global Enum $__g_GUICtrlButton_Event_Click
 Global Const $__g_GUICtrlButton_WM_ = $WM_USER + 1
 Global Const $__g_GUICtrlButton_tagCREATESTRUCTW = "PTR lpCreateParams;HANDLE hInstance;HANDLE hMenu;HWND hwndParent;INT cy;INT cx;INT y;INT x;LONG style;PTR lpszName;PTR lpszClass;DWORD dwExStyle;"
-Global Const $__g_GUICtrlButton_tagCtrl = "DWORD dwTextColor;DWORD dwBackgroundColor;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;ptr pTransitions;int iTransitionCount;ptr pEvents;int iEventCount;"
+Global Const $__g_GUICtrlButton_tagCtrl = "DWORD dwTextColor;DWORD dwBackgroundColor;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;BOOLEAN isFocused;ptr pTransitions;int iTransitionCount;ptr pEvents;int iEventCount;"
 Global Const $__g_GUICtrlButton_tagTransition = "int type;dword dwStartValue; dword dwEndValue;uint64 startTime;int duration;int delay;int targetIndex;double Bezier[4];"
 Global Const $__g_GUICtrlButton_tagEvent = "int iEventID;ptr pFunc;"
 Global Const $__g_GUICtrlButton_tagCubicBezier = "double p1[2];double p2[2];"
@@ -139,7 +139,7 @@ Func __GUICtrlButton_WndProc($hWnd, $iMsg, $wParam, $lParam)
             Return __GUICtrlButton_OnSetFont($tCtrl, $wParam, $lParam)
         Case $WM_MOUSELEAVE
             Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
-            if $tCtrl.isHovered = 1 Then __GUICtrlButton_AddTransition($tCtrl, $__g_GUICtrlButton_Transition_Type_ARGB, 2, 0x0AFFFFFF, 150)
+            if $tCtrl.isHovered = 1 And $tCtrl.isFocused = 0 Then __GUICtrlButton_AddTransition($tCtrl, $__g_GUICtrlButton_Transition_Type_ARGB, 2, 0x0AFFFFFF, 150)
             $tCtrl.isHovered = 0
             _WinAPI_InvalidateRect($hWnd, 0, True)
             return 0
@@ -149,6 +149,21 @@ Func __GUICtrlButton_WndProc($hWnd, $iMsg, $wParam, $lParam)
         Case $WM_CAPTURECHANGED
             Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
             Return __GUICtrlButton_OnCaptureChanged($tCtrl, $wParam, $lParam)
+        Case $WM_SETFOCUS
+            $tCtrl = __GUICtrlButton_GetInstance($hWnd)
+            If $tCtrl.isHovered = 0 And $tCtrl.isFocused = 0 Then
+                __GUICtrlButton_AddTransition($tCtrl, $__g_GUICtrlButton_Transition_Type_ARGB, 2, 0x13FFFFFF, 150)
+            EndIf
+            $tCtrl.isFocused = 1
+            Return 0
+        Case $WM_KILLFOCUS
+            $tCtrl = __GUICtrlButton_GetInstance($hWnd)
+            If $tCtrl.isHovered = 0 And $tCtrl.isFocused = 1 Then
+                __GUICtrlButton_AddTransition($tCtrl, $__g_GUICtrlButton_Transition_Type_ARGB, 2, 0x0AFFFFFF, 150)
+            EndIf
+            $tCtrl.isFocused = 0
+            _WinAPI_InvalidateRect($hWnd, 0, True)
+            Return 0
     EndSwitch
 
     Return _WinAPI_DefWindowProcW($hWnd, $iMsg, $wParam, $lParam)
@@ -328,7 +343,7 @@ Func _GUICtrlButton_Create($hWnd, $text, $iLeft, $iTop, $iWidth, $iHeight)
     EndIf
 
     Local $iExStyle = $WS_EX_TRANSPARENT; $WS_EX_CLIENTEDGE
-    Local $iStyle = BitOR($WS_VISIBLE, $WS_CHILD)
+    Local $iStyle = BitOR($WS_VISIBLE, $WS_CHILD, $WS_TABSTOP)
     Local $hMenu = $iCtrlID
     Local $hInstance = $__g_GUICtrlButton_hInstance
     Local $pParam = 0
