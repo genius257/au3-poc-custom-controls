@@ -459,14 +459,6 @@ Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
     If $bReRender Then _WinAPI_InvalidateRect($hWnd, 0, True)
 EndFunc
 
-Func __GUICtrlButton_GetLerp($iStart, $iEnd, $fRatio)
-    Local $aIn = _UnpackARGB($iStart), $aOut = _UnpackARGB($iEnd), $aRes[4]
-    For $i = 0 To 3
-        $aRes[$i] = $aIn[$i] + ($aOut[$i] - $aIn[$i]) * $fRatio
-    Next
-    Return _PackARGB($aRes[0], $aRes[1], $aRes[2], $aRes[3])
-EndFunc
-
 Func _ARGBToArray($iColor, ByRef $a)
     $a[0] = BitAND(BitShift($iColor, 24), 0xFF)
     $a[1] = BitAND(BitShift($iColor, 16), 0xFF)
