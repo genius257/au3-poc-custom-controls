@@ -18,9 +18,15 @@ Global Enum $__g_GUICtrlButton_Event_Click
 Global Const $__g_GUICtrlButton_WM_ = $WM_USER + 1
 Global Const $__g_GUICtrlButton_tagCREATESTRUCTW = "PTR lpCreateParams;HANDLE hInstance;HANDLE hMenu;HWND hwndParent;INT cy;INT cx;INT y;INT x;LONG style;PTR lpszName;PTR lpszClass;DWORD dwExStyle;"
 Global Const $__g_GUICtrlButton_tagCtrl = "DWORD dwTextColor;DWORD dwBackgroundColor;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;ptr pTransitions;int iTransitionCount;ptr pEvents;int iEventCount;"
-Global Const $__g_GUICtrlButton_tagTransition = "int type;dword dwStartValue; dword dwEndValue;uint64 startTime;int duration;int delay;int targetIndex;"
+Global Const $__g_GUICtrlButton_tagTransition = "int type;dword dwStartValue; dword dwEndValue;uint64 startTime;int duration;int delay;int targetIndex;double Bezier[4];"
 Global Const $__g_GUICtrlButton_tagEvent = "int iEventID;ptr pFunc;"
+Global Const $__g_GUICtrlButton_tagCubicBezier = "double p1[2];double p2[2];"
 Global Const $__g_GUICtrlButton_sClass = _WinAPI_CreateGUID()
+Global Const $__g_GUICtrlButton_Bezier_Ease = _GUICtrlButton_Create_CubicBezierEasing(0.25, 0.1, 0.25, 1.0)
+Global Const $__g_GUICtrlButton_Bezier_Linear = _GUICtrlButton_Create_CubicBezierEasing(0.0, 0.0, 1.0, 1.0)
+Global Const $__g_GUICtrlButton_Bezier_EaseIn = _GUICtrlButton_Create_CubicBezierEasing(0.42, 0, 1.0, 1.0)
+Global Const $__g_GUICtrlButton_Bezier_easeOut = _GUICtrlButton_Create_CubicBezierEasing(0, 0, 0.58, 1.0)
+Global Const $__g_GUICtrlButton_Bezier_easeInOut = _GUICtrlButton_Create_CubicBezierEasing(0.42, 0, 0.58, 1.0)
 Global $__g_GUICtrlButton_hInstance = 0
 Global $__g_GUICtrlButton_hCursor = 0
 Global $__g_GUICtrlButton_hProc = 0
@@ -346,7 +352,7 @@ Func __GUICtrlButton_ExtTextOut($hdc, $x, $y, $options, $lprect, $lpstring, $lpD
     Return $aRet[0]
 EndFunc
 
-Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration, $iDelay = 0)
+Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration, $iDelay = 0, $tEasing = $__g_GUICtrlButton_Bezier_Linear)
     Local $iSize = DllStructGetSize(DllStructCreate($__g_GUICtrlButton_tagTransition, 1))
 
     ; --- FIX: Check for existing transition on the same targetIndex ---
@@ -361,6 +367,10 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
             $tCheck.startTime = _WinAPI_GetTickCount64()
             $tCheck.duration = $iDuration
             $tCheck.delay = $iDelay
+            $tCheck.Bezier((1)) = $tEasing.p1(1)
+            $tCheck.Bezier((2)) = $tEasing.p1(2)
+            $tCheck.Bezier((3)) = $tEasing.p2(1)
+            $tCheck.Bezier((4)) = $tEasing.p2(2)
             Return ; Exit function, don't add a new one
         EndIf
     Next
@@ -377,6 +387,10 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
     $tTransition.startTime = _WinAPI_GetTickCount64()
     $tTransition.duration = $iDuration
     $tTransition.delay = $iDelay
+    $tTransition.Bezier((1)) = $tEasing.p1(1)
+    $tTransition.Bezier((2)) = $tEasing.p1(2)
+    $tTransition.Bezier((3)) = $tEasing.p2(1)
+    $tTransition.Bezier((4)) = $tEasing.p2(2)
 
     If $tCtrl.iTransitionCount = 1 Then _Timer_SetTimer($tCtrl.hwnd, 16, "__GUICtrlButton_ProcessTransitions") ;_WinAPI_SetTimer($tCtrl.hwnd, )
 EndFunc
@@ -398,21 +412,28 @@ Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
         Local $tTrans = DllStructCreate($__g_GUICtrlButton_tagTransition, $pCurrent)
         Local $fRatio = ($iNow - $tTrans.StartTime) / $tTrans.Duration
         If $fRatio > 1.0 Then $fRatio = 1.0
-        
-        Local $iNewVal
+
+        Local $iNewVal = 0, $progress = GetCubicBezierEasingProgress($fRatio, $tTrans.Bezier(1), $tTrans.Bezier(2), $tTrans.Bezier(3), $tTrans.Bezier(4))
         Switch $tTrans.type
             Case $__g_GUICtrlButton_Transition_Type_ARGB
-                $iNewVal = __GUICtrlButton_GetLerp($tTrans.dwStartValue, $tTrans.dwEndValue, $fRatio)
+                Local Static $aStartARGB[4], $aEndARGB[4], $aCurrentARGB[4]
+                _ARGBToArray($tTrans.dwStartValue, $aStartARGB)
+                _ARGBToArray($tTrans.dwEndValue, $aEndARGB)
+                For $i = 0 To 3
+                    $aCurrentARGB[$i] = $aStartARGB[$i] + ($progress * ($aEndARGB[$i] - $aStartARGB[$i]))
+                Next
+                $iNewVal = _ArrayToARGB($aCurrentARGB)
+
+                If $iNewVal <> DllStructGetData($tCtrl, $tTrans.targetIndex) Then
+                    $bReRender = True
+                    DllStructSetData($tCtrl, $tTrans.targetIndex, $iNewVal)
+                EndIf
             Case Else
                 ConsoleWriteError("Unexpected transition type: " & $tTrans.type & @CRLF)
                 $i += 1
                 ContinueLoop
         EndSwitch
-        If $iNewVal <> DllStructGetData($tCtrl, $tTrans.targetIndex) Then
-            $bReRender = True
-            DllStructSetData($tCtrl, $tTrans.targetIndex, $iNewVal)
-        EndIf
-        
+
         If $fRatio >= 1.0 Then
             ; Remove transition by shifting memory or decrementing count for simplicity here:
             $tCtrl.iTransitionCount -= 1
@@ -490,4 +511,40 @@ Func _WinAPI_GetCursorPos()
     Local $tPoint = DllStructCreate($tagPOINT)
 	Local $nResult = DllCall("user32.dll", "int", "GetCursorPos", "struct*", $tPoint)
 	Return SetExtended($nResult[0], $tPoint)
+EndFunc
+
+Func _GUICtrlButton_Create_CubicBezierEasing($p1x, $p1y, $p2x, $p2y)
+    Local $tBezier = DllStructCreate($__g_GUICtrlButton_tagCubicBezier)
+    $tBezier.p1((1)) = $p1x
+    $tBezier.p1((2)) = $p1y
+    $tBezier.p2((1)) = $p2x
+    $tBezier.p2((2)) = $p2y
+
+    Return $tBezier
+EndFunc
+
+; Primary function to get the eased "y" value based on "x" progress (0.0 to 1.0)
+Func GetCubicBezierEasingProgress($x_target, $fP1x, $fP1y, $fP2x, $fP2y)
+    Local $t = $x_target ; Initial guess
+    
+    ; Newton-Raphson iterations to find t for given x
+    For $i = 1 To 8
+        Local $x_val = _CalculateCubicBezierPoint($t, 0, $fP1x, $fP2x, 1) - $x_target
+        Local $slope = _CalculateCubicBezierSlope($t, 0, $fP1x, $fP2x, 1)
+        If $slope == 0 Then ExitLoop
+        $t -= $x_val / $slope
+    Next
+    
+    ; Return the y value for the found t
+    Return _CalculateCubicBezierPoint($t, 0, $fP1y, $fP2y, 1)
+EndFunc
+
+; Helper to calculate the cubic bezier value at T for a specific axis
+Func _CalculateCubicBezierPoint($fT, $fP0, $fP1, $fP2, $fP3)
+    Return (1-$fT)^3*$fP0 + 3*(1-$fT)^2*$fT*$fP1 + 3*(1-$fT)*$fT^2*$fP2 + $fT^3*$fP3
+EndFunc
+
+; Helper to calculate the derivative (slope) of the cubic bezier at T
+Func _CalculateCubicBezierSlope($fT, $fP0, $fP1, $fP2, $fP3)
+    Return 3*(1-$fT)^2*($fP1-$fP0) + 6*(1-$fT)*$fT*($fP2-$fP1) + 3*$fT^2*($fP3-$fP2)
 EndFunc
