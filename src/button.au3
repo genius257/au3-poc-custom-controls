@@ -13,7 +13,7 @@ If Not IsDeclared("MA_ACTIVATE") Then Global Const $MA_ACTIVATE  = 1
 If Not IsDeclared("ETO_OPAQUE") Then Global Const $ETO_OPAQUE = 2
 If Not IsDeclared("PRF_CLIENT") Then Global Const $PRF_CLIENT = 0x00000004
 
-Global Enum $__g_GUICtrlButton_Transition_Type_ARGB
+Global Enum $__g_GUICtrlButton_Transition_Type_ARGB, $__g_GUICtrlButton_Transition_Type_Rect
 Global Enum $__g_GUICtrlButton_Event_Click
 Global Const $__g_GUICtrlButton_WM_ = $WM_USER + 1
 Global Const $__g_GUICtrlButton_tagCREATESTRUCTW = "PTR lpCreateParams;HANDLE hInstance;HANDLE hMenu;HWND hwndParent;INT cy;INT cx;INT y;INT x;LONG style;PTR lpszName;PTR lpszClass;DWORD dwExStyle;"
@@ -359,10 +359,17 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
     For $i = 0 To $tCtrl.iTransitionCount - 1
         Local $pCheck = $tCtrl.pTransitions + ($i * $iSize)
         Local $tCheck = DllStructCreate($__g_GUICtrlButton_tagTransition, $pCheck)
-        If $tCheck.targetIndex = $iIndex Then
+        If $tCheck.type = $iType And $tCheck.targetIndex = $iIndex Then
             ; Update the existing transition instead of adding a new one
             $tCheck.type = $iType
-            $tCheck.dwStartValue = DllStructGetData($tCtrl, $iIndex)
+            Switch $iType
+                Case $__g_GUICtrlButton_Transition_Type_ARGB
+                    $tCheck.dwStartValue = DllStructGetData($tCtrl, $iIndex)
+                Case $__g_GUICtrlButton_Transition_Type_Rect
+                    Local $tRect = _WinAPI_GetWindowRect($hWnd)
+                    _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $tRect)
+                    $tCheck.dwStartValue = $tRect.Left
+            EndSwitch
             $tCheck.dwEndValue = $iEndVal
             $tCheck.startTime = _WinAPI_GetTickCount64()
             $tCheck.duration = $iDuration
@@ -382,7 +389,14 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
     Local $tTransition = DllStructCreate($__g_GUICtrlButton_tagTransition, $tCtrl.pTransitions + (($tCtrl.iTransitionCount - 1) * $iSize))
     $tTransition.type = $iType
     $tTransition.targetIndex = $iIndex
-    $tTransition.dwStartValue = DllStructGetData($tCtrl, $iIndex)
+    Switch $iType
+        Case $__g_GUICtrlButton_Transition_Type_ARGB
+            $tTransition.dwStartValue = DllStructGetData($tCtrl, $iIndex)
+        Case $__g_GUICtrlButton_Transition_Type_Rect
+            Local $tRect = _WinAPI_GetWindowRect($tCtrl.hwnd)
+            _WinAPI_ScreenToClient(_WinAPI_GetParent($tCtrl.hwnd), $tRect)
+            $tTransition.dwStartValue = $tRect.Left
+    EndSwitch
     $tTransition.dwEndValue = $iEndVal
     $tTransition.startTime = _WinAPI_GetTickCount64()
     $tTransition.duration = $iDuration
@@ -428,6 +442,12 @@ Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
                     $bReRender = True
                     DllStructSetData($tCtrl, $tTrans.targetIndex, $iNewVal)
                 EndIf
+            Case $__g_GUICtrlButton_Transition_Type_Rect
+                $iNewVal = $tTrans.dwStartValue + ($progress * ($tTrans.dwEndValue - $tTrans.dwStartValue))
+
+                Local $tRect = _WinAPI_GetWindowRect($hWnd)
+                _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $tRect)
+                _WinAPI_SetWindowPos($hWnd, 0, $iNewVal, $tRect.top, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
             Case Else
                 ConsoleWriteError("Unexpected transition type: " & $tTrans.type & @CRLF)
                 $i += 1
