@@ -277,7 +277,7 @@ Func __GUICtrlButton_OnLButtonUp($tCtrl, $wParam, $lParam)
         _WinAPI_SetWindowPos($hWnd, 0, $tRect.left-1, $tRect.top-1, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
 
         Local $tRect = _WinAPI_GetClientRect($hWnd)
-        Local $tPoint = _WinAPI_GetCursorPos()
+        Local $tPoint = __GUICtrlButton_WinAPI_GetCursorPos()
         _WinAPI_ScreenToClient($hWnd, $tPoint)
         If _WinAPI_PtInRect($tRect, $tPoint) Then;FIXME: this won't work as expected with rounded cornors
             __GUICtrlButton_DispatchEvent($tCtrl, $__g_GUICtrlButton_Event_Click)
@@ -427,16 +427,16 @@ Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
         Local $fRatio = ($iNow - $tTrans.StartTime) / $tTrans.Duration
         If $fRatio > 1.0 Then $fRatio = 1.0
 
-        Local $iNewVal = 0, $progress = GetCubicBezierEasingProgress($fRatio, $tTrans.Bezier(1), $tTrans.Bezier(2), $tTrans.Bezier(3), $tTrans.Bezier(4))
+        Local $iNewVal = 0, $progress = __GUICtrlButton_GetCubicBezierEasingProgress($fRatio, $tTrans.Bezier(1), $tTrans.Bezier(2), $tTrans.Bezier(3), $tTrans.Bezier(4))
         Switch $tTrans.type
             Case $__g_GUICtrlButton_Transition_Type_ARGB
                 Local Static $aStartARGB[4], $aEndARGB[4], $aCurrentARGB[4]
-                _ARGBToArray($tTrans.dwStartValue, $aStartARGB)
-                _ARGBToArray($tTrans.dwEndValue, $aEndARGB)
+                __GUICtrlButton_ARGBToArray($tTrans.dwStartValue, $aStartARGB)
+                __GUICtrlButton_ARGBToArray($tTrans.dwEndValue, $aEndARGB)
                 For $i = 0 To 3
                     $aCurrentARGB[$i] = $aStartARGB[$i] + ($progress * ($aEndARGB[$i] - $aStartARGB[$i]))
                 Next
-                $iNewVal = _ArrayToARGB($aCurrentARGB)
+                $iNewVal = __GUICtrlButton_ArrayToARGB($aCurrentARGB)
 
                 If $iNewVal <> DllStructGetData($tCtrl, $tTrans.targetIndex) Then
                     $bReRender = True
@@ -479,14 +479,14 @@ Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
     If $bReRender Then _WinAPI_InvalidateRect($hWnd, 0, True)
 EndFunc
 
-Func _ARGBToArray($iColor, ByRef $a)
+Func __GUICtrlButton_ARGBToArray($iColor, ByRef $a)
     $a[0] = BitAND(BitShift($iColor, 24), 0xFF)
     $a[1] = BitAND(BitShift($iColor, 16), 0xFF)
     $a[2] = BitAND(BitShift($iColor, 8), 0xFF)
     $a[3] = BitAND($iColor, 0xFF)
 EndFunc
 
-Func _ArrayToARGB(ByRef $a)
+Func __GUICtrlButton_ArrayToARGB(ByRef $a)
     Return BitOR(BitShift($a[0], -24), BitShift($a[1], -16), BitShift($a[2], -8), $a[3])
 EndFunc
 
@@ -520,7 +520,7 @@ Func __GUICtrlButton_DispatchEvent($tCtrl, $iEventID)
     Next
 EndFunc
 
-Func _WinAPI_GetCursorPos()
+Func __GUICtrlButton_WinAPI_GetCursorPos()
     Local $tPoint = DllStructCreate($tagPOINT)
 	Local $nResult = DllCall("user32.dll", "int", "GetCursorPos", "struct*", $tPoint)
 	Return SetExtended($nResult[0], $tPoint)
@@ -537,27 +537,27 @@ Func _GUICtrlButton_Create_CubicBezierEasing($p1x, $p1y, $p2x, $p2y)
 EndFunc
 
 ; Primary function to get the eased "y" value based on "x" progress (0.0 to 1.0)
-Func GetCubicBezierEasingProgress($x_target, $fP1x, $fP1y, $fP2x, $fP2y)
+Func __GUICtrlButton_GetCubicBezierEasingProgress($x_target, $fP1x, $fP1y, $fP2x, $fP2y)
     Local $t = $x_target ; Initial guess
     
     ; Newton-Raphson iterations to find t for given x
     For $i = 1 To 8
-        Local $x_val = _CalculateCubicBezierPoint($t, 0, $fP1x, $fP2x, 1) - $x_target
-        Local $slope = _CalculateCubicBezierSlope($t, 0, $fP1x, $fP2x, 1)
+        Local $x_val = __GUICtrlButton_CalculateCubicBezierPoint($t, 0, $fP1x, $fP2x, 1) - $x_target
+        Local $slope = __GUICtrlButton_CalculateCubicBezierSlope($t, 0, $fP1x, $fP2x, 1)
         If $slope == 0 Then ExitLoop
         $t -= $x_val / $slope
     Next
     
     ; Return the y value for the found t
-    Return _CalculateCubicBezierPoint($t, 0, $fP1y, $fP2y, 1)
+    Return __GUICtrlButton_CalculateCubicBezierPoint($t, 0, $fP1y, $fP2y, 1)
 EndFunc
 
 ; Helper to calculate the cubic bezier value at T for a specific axis
-Func _CalculateCubicBezierPoint($fT, $fP0, $fP1, $fP2, $fP3)
+Func __GUICtrlButton_CalculateCubicBezierPoint($fT, $fP0, $fP1, $fP2, $fP3)
     Return (1-$fT)^3*$fP0 + 3*(1-$fT)^2*$fT*$fP1 + 3*(1-$fT)*$fT^2*$fP2 + $fT^3*$fP3
 EndFunc
 
 ; Helper to calculate the derivative (slope) of the cubic bezier at T
-Func _CalculateCubicBezierSlope($fT, $fP0, $fP1, $fP2, $fP3)
+Func __GUICtrlButton_CalculateCubicBezierSlope($fT, $fP0, $fP1, $fP2, $fP3)
     Return 3*(1-$fT)^2*($fP1-$fP0) + 6*(1-$fT)*$fT*($fP2-$fP1) + 3*$fT^2*($fP3-$fP2)
 EndFunc
