@@ -7,7 +7,6 @@
 #include <WinAPIRes.au3>
 #include <GDIPlus.au3>
 #include <WinAPISys.au3>
-#include <Timers.au3>
 
 If Not IsDeclared("MA_ACTIVATE") Then Global Const $MA_ACTIVATE  = 1
 If Not IsDeclared("ETO_OPAQUE") Then Global Const $ETO_OPAQUE = 2
@@ -421,13 +420,13 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
     $tTransition.Bezier((3)) = $tEasing.p2(1)
     $tTransition.Bezier((4)) = $tEasing.p2(2)
 
-    If $tCtrl.iTransitionCount = 1 Then _Timer_SetTimer($tCtrl.hwnd, 16, "__GUICtrlButton_ProcessTransitions") ;_WinAPI_SetTimer($tCtrl.hwnd, )
+    If $tCtrl.iTransitionCount = 1 Then __GUICtrlButton_SetTimer($tCtrl.hwnd, 0, 16, __GUICtrlButton_ProcessTransitions); _Timer_SetTimer($tCtrl.hwnd, 16, "__GUICtrlButton_ProcessTransitions") ;_WinAPI_SetTimer($tCtrl.hwnd, )
 EndFunc
 
 Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
     Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
     If $tCtrl.iTransitionCount = 0 Then
-        _Timer_KillTimer($hWnd, $iIDTimer)
+        __GUICtrlButton_KillTimer($hWnd, $iIDTimer)
         Return
     EndIf
 
@@ -575,4 +574,23 @@ EndFunc
 ; Helper to calculate the derivative (slope) of the cubic bezier at T
 Func __GUICtrlButton_CalculateCubicBezierSlope($fT, $fP0, $fP1, $fP2, $fP3)
     Return 3*(1-$fT)^2*($fP1-$fP0) + 6*(1-$fT)*$fT*($fP2-$fP1) + 3*$fT^2*($fP3-$fP2)
+EndFunc
+
+Func __GUICtrlButton_SetTimer($hWnd, $nIDEvent, $uElapse, $lpTimerFunc)
+    If IsString($lpTimerFunc) Or IsFunc($lpTimerFunc) Then
+        Local $hCallBack = DllCallbackRegister($lpTimerFunc, "none", "hwnd;uint;uint_ptr;dword")
+        If $hCallBack = 0 Then Return SetError(-1, -1, 0)
+        $lpTimerFunc = DllCallbackGetPtr($hCallBack)
+        If $lpTimerFunc = 0 Then Return SetError(-1, -2, 0)
+    EndIf
+
+    Local $aRet = DllCall("user32.dll", "uint_ptr", "SetTimer", "hwnd", $hWnd, "uint_ptr", $nIDEvent, "uint", $uElapse, "ptr", $lpTimerFunc)
+    If @error <> 0 Then Return SetError(@error, @extended, 0)
+    Return $aRet[0]
+EndFunc
+
+Func __GUICtrlButton_KillTimer($hWnd, $nIDEvent)
+    Local $aRet = DllCall("user32.dll", "bool", "KillTimer", "hwnd", $hWnd, "uint_ptr", $nIDEvent)
+    If @error <> 0 Then Return SetError(@error, @extended, 0)
+    Return $aRet[0]
 EndFunc
