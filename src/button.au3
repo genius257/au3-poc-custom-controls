@@ -381,8 +381,8 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
                     $tCheck.dwStartValue = DllStructGetData($tCtrl, $iIndex)
                 Case $__g_GUICtrlButton_Transition_Type_Rect
                     Local $tRect = _WinAPI_GetWindowRect($hWnd)
-                    _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $tRect)
-                    $tCheck.dwStartValue = $tRect.Left
+                    DllCall("user32.dll", "int", "MapWindowPoints", "hwnd", 0, "hwnd", _WinAPI_GetParent($tCtrl.hwnd), "struct*", $tRect, "uint", 2)
+                    $tCheck.dwStartValue = $iIndex > 2 ? DllStructGetData($tRect, $iIndex) - DllStructGetData($tRect, $iIndex-2) : DllStructGetData($tRect, $iIndex)
             EndSwitch
             $tCheck.dwEndValue = $iEndVal
             $tCheck.startTime = _WinAPI_GetTickCount64()
@@ -408,8 +408,8 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
             $tTransition.dwStartValue = DllStructGetData($tCtrl, $iIndex)
         Case $__g_GUICtrlButton_Transition_Type_Rect
             Local $tRect = _WinAPI_GetWindowRect($tCtrl.hwnd)
-            _WinAPI_ScreenToClient(_WinAPI_GetParent($tCtrl.hwnd), $tRect)
-            $tTransition.dwStartValue = $tRect.Left
+            DllCall("user32.dll", "int", "MapWindowPoints", "hwnd", 0, "hwnd", _WinAPI_GetParent($tCtrl.hwnd), "struct*", $tRect, "uint", 2)
+            $tTransition.dwStartValue = $iIndex > 2 ? DllStructGetData($tRect, $iIndex) - DllStructGetData($tRect, $iIndex-2) : DllStructGetData($tRect, $iIndex)
     EndSwitch
     $tTransition.dwEndValue = $iEndVal
     $tTransition.startTime = _WinAPI_GetTickCount64()
@@ -461,7 +461,11 @@ Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
 
                 Local $tRect = _WinAPI_GetWindowRect($hWnd)
                 _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $tRect)
-                _WinAPI_SetWindowPos($hWnd, 0, $iNewVal, $tRect.top, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
+
+                If $iNewVal <> DllStructGetData($tRect, $tTrans.targetIndex) Then
+                    DllStructSetData($tRect, $tTrans.targetIndex, $iNewVal)
+                    _WinAPI_SetWindowPos($hWnd, 0, $tRect.Left, $tRect.top, $tRect.Right - $tRect.Left, $tRect.Bottom - $tRect.Top, BitOr($tTrans.targetIndex > 2 ? $SWP_NOMOVE : $SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
+                EndIf
             Case Else
                 ConsoleWriteError("Unexpected transition type: " & $tTrans.type & @CRLF)
                 $i += 1
