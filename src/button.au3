@@ -460,7 +460,7 @@ Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
                 $iNewVal = $tTrans.dwStartValue + ($progress * ($tTrans.dwEndValue - $tTrans.dwStartValue))
 
                 Local $tRect = _WinAPI_GetWindowRect($hWnd)
-                _WinAPI_ScreenToClient(_WinAPI_GetParent($hWnd), $tRect)
+                DllCall("user32.dll", "int", "MapWindowPoints", "hwnd", 0, "hwnd", _WinAPI_GetParent($tCtrl.hwnd), "struct*", $tRect, "uint", 2)
 
                 If $iNewVal <> DllStructGetData($tRect, $tTrans.targetIndex) Then
                     DllStructSetData($tRect, $tTrans.targetIndex, $iNewVal)
