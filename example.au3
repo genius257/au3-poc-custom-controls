@@ -34,7 +34,7 @@ Func MyFunction($hWnd)
             $tEasing = _GUICtrlButton_Create_CubicBezierEasing(0.175, 0.885, 0.32, 1.275)
     EndSwitch
 
-    _WinAPI_SetWindowPos($hBox, 0, 10, 100, 0, 0, BitOr($SWP_NOSIZE, $SWP_NOZORDER, $SWP_NOACTIVATE))
+    _WinAPI_SetWindowPos($hBox, 0, 10, 100, 100, 100, BitOr($SWP_NOZORDER, $SWP_NOACTIVATE))
     Local $tBox = __GUICtrlButton_GetInstance($hBox)
     __GUICtrlButton_AddTransition($tBox, $__g_GUICtrlButton_Transition_Type_Rect, 1, 500, 1000, 0, $tEasing)
 EndFunc
