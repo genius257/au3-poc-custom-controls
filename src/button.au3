@@ -17,8 +17,8 @@ Global Enum $__g_GUICtrlButton_Event_Click
 Global Const $__g_GUICtrlButton_WM_ = $WM_USER + 1
 Global Const $__g_GUICtrlButton_tagCREATESTRUCTW = "PTR lpCreateParams;HANDLE hInstance;HANDLE hMenu;HWND hwndParent;INT cy;INT cx;INT y;INT x;LONG style;PTR lpszName;PTR lpszClass;DWORD dwExStyle;"
 Global Const $__g_GUICtrlButton_tagCtrl = "DWORD dwTextColor;DWORD dwBackgroundColor;HANDLE hFont;HWND hwnd;BOOLEAN isHovered;BOOLEAN isDragging;BOOLEAN isFocused;ptr pTransitions;int iTransitionCount;ptr pEvents;int iEventCount;"
-Global Const $__g_GUICtrlButton_tagTransition = "int type;dword dwStartValue; dword dwEndValue;uint64 startTime;int duration;int delay;int targetIndex;double Bezier[4];"
-Global Const $__g_GUICtrlButton_tagEvent = "int iEventID;ptr pFunc;"
+Global Const $__g_GUICtrlButton_tagTransition = "int64 id;int type;dword dwStartValue; dword dwEndValue;uint64 startTime;int duration;int delay;int targetIndex;double Bezier[4];"
+Global Const $__g_GUICtrlButton_tagEvent = "int64 id;int iEventID;ptr pFunc;"
 Global Const $__g_GUICtrlButton_tagCubicBezier = "double p1[2];double p2[2];"
 Global Const $__g_GUICtrlButton_sClass = _WinAPI_CreateGUID()
 Global Const $__g_GUICtrlButton_Bezier_Ease = _GUICtrlButton_Create_CubicBezierEasing(0.25, 0.1, 0.25, 1.0)
@@ -367,6 +367,8 @@ Func __GUICtrlButton_ExtTextOut($hdc, $x, $y, $options, $lprect, $lpstring, $lpD
 EndFunc
 
 Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration, $iDelay = 0, $tEasing = $__g_GUICtrlButton_Bezier_Linear)
+    Local Static $iNextTransitionId = Dec("8000000000000000", 2)
+
     Local $iSize = DllStructGetSize(DllStructCreate($__g_GUICtrlButton_tagTransition, 1))
 
     ; --- FIX: Check for existing transition on the same targetIndex ---
@@ -374,6 +376,8 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
         Local $pCheck = $tCtrl.pTransitions + ($i * $iSize)
         Local $tCheck = DllStructCreate($__g_GUICtrlButton_tagTransition, $pCheck)
         If $tCheck.type = $iType And $tCheck.targetIndex = $iIndex Then
+            $tCheck.id = $iNextTransitionId
+            $iNextTransitionId += 1
             ; Update the existing transition instead of adding a new one
             $tCheck.type = $iType
             Switch $iType
@@ -392,7 +396,7 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
             $tCheck.Bezier((2)) = $tEasing.p1(2)
             $tCheck.Bezier((3)) = $tEasing.p2(1)
             $tCheck.Bezier((4)) = $tEasing.p2(2)
-            Return ; Exit function, don't add a new one
+            Return $tCheck.id; Exit function, don't add a new one
         EndIf
     Next
     ; -----------------------------------------------------------------
@@ -401,6 +405,8 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
     $tCtrl.pTransitions = _WinAPI_CreateBuffer($tCtrl.iTransitionCount * $iSize, $tCtrl.pTransitions)
 
     Local $tTransition = DllStructCreate($__g_GUICtrlButton_tagTransition, $tCtrl.pTransitions + (($tCtrl.iTransitionCount - 1) * $iSize))
+    $tTransition.id = $iNextTransitionId
+    $iNextTransitionId += 1
     $tTransition.type = $iType
     $tTransition.targetIndex = $iIndex
     Switch $iType
@@ -421,6 +427,8 @@ Func __GUICtrlButton_AddTransition($tCtrl, $iType, $iIndex, $iEndVal, $iDuration
     $tTransition.Bezier((4)) = $tEasing.p2(2)
 
     If $tCtrl.iTransitionCount = 1 Then __GUICtrlButton_SetTimer($tCtrl.hwnd, 0, 16, __GUICtrlButton_ProcessTransitions); _Timer_SetTimer($tCtrl.hwnd, 16, "__GUICtrlButton_ProcessTransitions") ;_WinAPI_SetTimer($tCtrl.hwnd, )
+
+    Return $tTransition.id
 EndFunc
 
 Func __GUICtrlButton_ProcessTransitions($hWnd, $iMsg, $iIDTimer, $iTime)
@@ -509,6 +517,8 @@ Func __GUICtrlButton_ArrayToARGB(ByRef $a)
 EndFunc
 
 Func _GUICtrlButton_AddEventHandler($hWnd, $iEventID, $pFunc)
+    Local Static $iNextHandlerId = Dec("8000000000000000", 2)
+
     Local $tCtrl = __GUICtrlButton_GetInstance($hWnd)
     Local $iSize = DllStructGetSize(DllStructCreate($__g_GUICtrlButton_tagEvent, 1))
     
@@ -523,6 +533,11 @@ Func _GUICtrlButton_AddEventHandler($hWnd, $iEventID, $pFunc)
     $tEvent.iEventID = $iEventID
     ; Handle both function names (strings) and actual pointers
     $tEvent.pFunc = IsString($pFunc) ? DllCallbackGetPtr(DllCallbackRegister($pFunc, "none", "hwnd")) : $pFunc
+
+    $tEvent.id = $iNextHandlerId
+    $iNextHandlerId += 1
+
+    Return $tEvent.id
 EndFunc
 
 Func __GUICtrlButton_DispatchEvent($tCtrl, $iEventID)
