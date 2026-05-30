@@ -358,6 +358,12 @@ Func _GUICtrlButton_Set_BackgroundColor($hWnd, $iARGB)
     _WinAPI_InvalidateRect($hWnd, 0, True)
 EndFunc
 
+Func _GUICtrlButton_Set_Text($hWnd, $sText)
+    Local $ret = _WinAPI_SetWindowText($hWnd, $sText)
+
+    Return SetError(@error, @extended, $ret)
+EndFunc
+
 Func __GUICtrlButton_ExtTextOut($hdc, $x, $y, $options, $lprect, $lpstring, $lpDx)
     $aRet = DllCall("Gdi32.dll", "BOOLEAN", "ExtTextOutW", "handle", $hdc, "INT", $x, "INT", $y, "UINT", $options, "struct*", $lprect, "WSTR", $lpString, "UINT", StringLen($lpString), "PTR", $lpDx)
 
