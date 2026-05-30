@@ -192,10 +192,8 @@ Func __GUICtrlButton_OnPaint($tCtrl, $wParam, $lParam)
     Local $hBitmap = _GDIPlus_BitmapCreateFromGraphics($tRect.Right - $tRect.Left, $tRect.Bottom - $tRect.Top, $hGraphics)
     Local $hGraphics2 = _GDIPlus_ImageGetGraphicsContext($hBitmap)
     _GDIPlus_GraphicsClear($hGraphics2, 0x00000000)
-    _GDIPlus_GraphicsSetSmoothingMode($hGraphics, $GDIP_SMOOTHINGMODE_ANTIALIAS)
     _GDIPlus_GraphicsSetSmoothingMode($hGraphics2, $GDIP_SMOOTHINGMODE_ANTIALIAS)
-    ;_GDIPlus_GraphicsSetPixelOffsetMode($hGraphics, $GDIP_PIXELOFFSETMODE_HALF)
-    _GDIPlus_GraphicsSetTextRenderingHint($hGraphics, $GDIP_TEXTRENDERINGHINTCLEARTYPEGRIDFIT)
+    _GDIPlus_GraphicsSetPixelOffsetMode($hGraphics, $GDIP_PIXELOFFSETMODE_HALF)
     _GDIPlus_GraphicsSetTextRenderingHint($hGraphics2, $GDIP_TEXTRENDERINGHINTCLEARTYPEGRIDFIT)
     Local $iRadius = 4
     Local $iDiameter = $iRadius * 2
